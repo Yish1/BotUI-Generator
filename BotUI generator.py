@@ -1,8 +1,10 @@
 import os
 import re
 dl = 0
+dop = 0
 bl = 0
 ismainline = 1
+diaopt = {}
 version = 0.1
 print("欢迎使用BotUI对话生成器！\n")
 
@@ -26,8 +28,10 @@ def makejsfile():
     os.makedirs('BotUI JS', exist_ok=True)
     while True:
         jsname = input("请输入要创建的对话脚本名称：")
-        if not jsname[0].isalpha() or re.search("[\u4e00-\u9fa5]", jsname):
-            print("对话脚本名称必须以英文字母开头，请重新输入！")
+        if not jsname[0].isalpha() or re.search("[\u4e00-\u9fa5]", jsname) or not jsname[:-1].isalnum() or not jsname[-1].isalnum() or jsname.endswith("\\"):
+            print("对话脚本名称必须以英文字母开头且不能以符号结尾，请重新输入！")
+
+
         else:
             break
     jspath = os.path.join("BotUI JS", f"{jsname}.js")
@@ -46,8 +50,7 @@ def makejsfile():
 
 
 def makeroute():
-    i = 1
-    while i == 1:
+    while True:
         a = "1.创建主线"
         b = "2.创建支线"
         c = "3.结束当前脚本"
@@ -58,21 +61,21 @@ def makeroute():
             if dl == 0:
                 print(f"\n{a}\n{b}\n")
             else:
-                #处于主线时
+                # 处于主线时
                 print(f"\n{a}\n{b}\n{c}\n{e}\n")
         elif ismainline == 2:
-                #处于支线时
-                if bl == 0:
-                    #处于支线时，但只有一条
-                    print(f"\n{b}\n{c}\n{d}\n{e}\n")
-                else:
-                    #处于支线时，但有多条
-                    print(f"\n{b}\n{c}\n{d}\n{e}\n{f}\n")
+            # 处于支线时
+            if bl == 0:
+                # 处于支线时，但只有一条
+                print(f"\n{b}\n{c}\n{d}\n{e}\n")
+            else:
+                # 处于支线时，但有多条
+                print(f"\n{b}\n{c}\n{d}\n{e}\n{f}\n")
         mode = input("选择操作：")
         if mode == "1":
             print(f"您选择了 \"{a}\"\n")
             mainline()
-            print(dl)
+            print(f"当前主线长度：{dl}\n")
         elif mode == "2":
             print(f"您选择了 \"{b}\"\n")
         elif mode == "3":
@@ -84,13 +87,13 @@ def makeroute():
             print(f"您选择了 \"{e}\"\n")
             diatest()
         elif mode == "6":
-            print(f"您选择了 \"{f}\"\n")  
+            print(f"您选择了 \"{f}\"\n")
         else:
             print("输入错误，请重新输入！")
 
 
 def mainline():
-    global dl,ismainline
+    global dl, ismainline
     ismainline = 1
     text = input("请输入主线文字内容 (支持MarkDown,Emoji,HTML)：")
     while not text:
@@ -109,16 +112,124 @@ def mainline():
         loading_value = "false"
     else:
         loading_value = "true"
-    default = f"botui.message.bot({{ delay: {delay_value}, loading: {loading_value}, content: '{text}' }})\n"
+    default = f'''
+    botui.message.bot({{
+        delay: {delay_value},
+        loading: {loading_value},
+        content: "{text}"
+    }})'''
     if dl == 0:
         dl += 1
     else:
-        default = f".then(function(){{ return botui.message.bot({{ delay: {delay_value}, loading: {loading_value}, content: '{text}' }}) }})\n"
+        default = f'''
+        .then(function(){{ 
+            return botui.message.bot({{ 
+                delay: {delay_value}, 
+                loading: {loading_value}, 
+                content: '{text}' 
+            }}) 
+        }})\n
+        '''
         dl += 1
     print(default)
-    with open(jspath, "a", encoding="utf8") as f:
-        f.write(default)
-    return dl
+    writefile(default)
+    inmainline()
+
+
+def inmainline():
+    while True:
+        a = "1.继续主线"
+        b = "2.新建对话选项"
+        c = "3.对话测试"
+        d = "4.返回路线菜单"
+        print(f"\n{a}\n{b}\n{c}\n{d}\n")
+        mode = input("选择操作：")
+        if mode == "1":
+            print(f"您选择了 \"{a}\"\n")
+            mainline()
+            print(f"当前主线长度：{dl}\n")
+        elif mode == "2":
+            print(f"您选择了 \"{b}\"\n")
+            diaoption()
+        elif mode == "3":
+            print(f"您选择了 \"{c}\"\n")
+            diatest()
+        elif mode == "4":
+            print(f"您选择了 \"{d}\"\n")
+            makeroute()
+        else:
+            print("输入错误，请重新输入！")
+
+def branchline(): #新建支线
+    print("功能开发中，敬请期待")
+
+def diaoption(): #新建对话选项
+    global dop,diaopt,askt
+    idop = 0
+    while True:
+        dop += 1
+        idop += 1
+        text = input("请输入对话选项内容 (支持MarkDown,Emoji,HTML)：")
+        while not text:
+            print("内容不能为空，请重新输入：")
+            text = input("请输入对话选项内容 (支持MarkDown,Emoji,HTML)：")
+
+        delay_value = input("请输入加载延迟时间（单位：毫秒  默认为200）：")
+        if delay_value == "":
+            delay_value = 200
+        else:
+            pass
+        i = input("是否链接当前按钮至当前路线？（1.是 2.否  默认为是）：")
+        if i == "1":
+            askt = "next"
+        elif i == "2":
+            askt = f"ask{dop}"
+            print(f"当前选项命名为{askt},可调用其他路线")
+        else:
+            askt = "next"
+        diaopt[dop] = [askt, text]  # 将对话选项存入字典中
+        default = f'''
+        .then(function (res) {{
+            return botui.action.button({{
+                delay: {delay_value},
+                action: [{{
+                    text: "{text}",
+                    value: "{askt}"
+                }}
+        '''
+        if idop == 1:
+            pass
+        else:
+            default = f'''
+            ,
+            {{
+                text: "{text}",
+                value: "{askt}"
+            }}
+            '''
+        print(default)
+        writefile(default)
+        while True:
+            mode = input(f"您已添加{dop}个对话选项，要继续嘛？\n1.继续添加\n2.查询选项名\n3.返回上一路线\n")
+            if mode == "1":
+                break
+            elif mode == "3":
+                print("正在返回上一路线\n")
+                endsys = '''
+            ]})
+        })
+                '''
+                writefile(endsys)
+                print(endsys)
+                return
+            elif mode == "2":
+                a = 1
+                while a <= len(diaopt):
+                    print(f"{diaopt[a]}")
+                    a += 1
+            else:
+                print("输入错误，请重新输入！")
+
 
 def diatest():
     html = f'''
@@ -134,7 +245,7 @@ def diatest():
                 style="min-height:300px; padding:2px 6px 4px 6px; background-color: transparent; border-radius: 10px;">
                 <center>
                     <p></p>
-                    <h6>对话测试</h6>
+                    <h6>正在测试{jspath}</h6>
                     <h4>与 xxx 对话中...</h4>
                     <p></p>
                     <p></p>
@@ -167,5 +278,10 @@ def diatest():
     with open(diatestpath, "w", encoding="utf8") as f:
         f.write(html)
     os.startfile(diatestpath)
-    makeroute()
+    return
+
+def writefile(default):
+    with open(jspath, "a", encoding="utf8") as f:
+        f.write(default)
+
 modeselect()
