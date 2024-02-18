@@ -1,11 +1,11 @@
 import os
 import re
-dl = 0
+ml = 0
 dop = 0
 bl = 0
 ismainline = 1
 diaopt = {}
-version = 0.1
+version = 0.2
 print("欢迎使用BotUI对话生成器！\n")
 
 
@@ -30,7 +30,6 @@ def makejsfile():
         jsname = input("请输入要创建的对话脚本名称：")
         if not jsname[0].isalpha() or re.search("[\u4e00-\u9fa5]", jsname) or not jsname[:-1].isalnum() or not jsname[-1].isalnum() or jsname.endswith("\\"):
             print("对话脚本名称必须以英文字母开头且不能以符号结尾，请重新输入！")
-
 
         else:
             break
@@ -58,7 +57,7 @@ def makeroute():
         e = "5.对话测试"
         f = "6.返回上一支线"
         if ismainline == 1:
-            if dl == 0:
+            if ml == 0:
                 print(f"\n{a}\n{b}\n")
             else:
                 # 处于主线时
@@ -75,51 +74,40 @@ def makeroute():
         if mode == "1":
             print(f"您选择了 \"{a}\"\n")
             mainline()
-            print(f"当前主线长度：{dl}\n")
+            print(f"当前主线长度：{ml}\n")
         elif mode == "2":
             print(f"您选择了 \"{b}\"\n")
+            makebl()
         elif mode == "3":
             print(f"您选择了 \"{c}\"\n")
             modeselect()
         elif mode == "4":
             print(f"您选择了 \"{d}\"\n")
+            mainline()
         elif mode == "5":
             print(f"您选择了 \"{e}\"\n")
             diatest()
         elif mode == "6":
             print(f"您选择了 \"{f}\"\n")
+            return
         else:
             print("输入错误，请重新输入！")
 
 
 def mainline():
-    global dl, ismainline
+    global ml, ismainline
     ismainline = 1
-    text = input("请输入主线文字内容 (支持MarkDown,Emoji,HTML)：")
-    while not text:
-        print("内容不能为空，请重新输入：")
-        text = input("请输入主线文字内容 (支持MarkDown,Emoji,HTML)：")
-
-    delay_value = input("请输入加载延迟时间（单位：毫秒  默认为200）：")
-    if delay_value == "":
-        delay_value = 200
-    else:
-        pass
-    loading_value = input("是否显示加载动画（1.显示 2.不显示  默认为显示）：")
-    if loading_value == "1":
-        loading_value = "true"
-    elif loading_value == "2":
-        loading_value = "false"
-    else:
-        loading_value = "true"
+    text = addvalue("text", "ml")
+    delay_value = addvalue("delay_value", "ml")
+    loading_value = addvalue("loading_value", "ml")
     default = f'''
     botui.message.bot({{
         delay: {delay_value},
         loading: {loading_value},
         content: "{text}"
     }})'''
-    if dl == 0:
-        dl += 1
+    if ml == 0:
+        ml += 1
     else:
         default = f'''
         .then(function(){{ 
@@ -130,7 +118,7 @@ def mainline():
             }}) 
         }})\n
         '''
-        dl += 1
+        ml += 1
     print(default)
     writefile(default)
     inmainline()
@@ -147,7 +135,7 @@ def inmainline():
         if mode == "1":
             print(f"您选择了 \"{a}\"\n")
             mainline()
-            print(f"当前主线长度：{dl}\n")
+            print(f"当前主线长度：{ml}\n")
         elif mode == "2":
             print(f"您选择了 \"{b}\"\n")
             diaoption()
@@ -160,25 +148,90 @@ def inmainline():
         else:
             print("输入错误，请重新输入！")
 
-def branchline(): #新建支线
-    print("功能开发中，敬请期待")
 
-def diaoption(): #新建对话选项
-    global dop,diaopt,askt
+def makebl():
+    while True:
+        blname = input("请输入支线名称：")
+        if not blname[0].isalpha() or re.search("[\u4e00-\u9fa5]", blname):
+            print("支线名称必须以英文字母开头且不能包含中文，请重新输入！")
+        else:
+            break
+    title = f"var {blname} = function () {{"
+    writefile(title)
+    branchline()
+
+
+def branchline():  # 新建支线
+    global bl, ismainline
+    text = addvalue("text", "bl")
+    ismainline = 2
+    delay_value = addvalue("delay_value", "bl")
+    loading_value = addvalue("loading_value", "bl")
+    default = f'''
+    botui.message.bot({{
+        delay: {delay_value},
+        loading: {loading_value},
+        content: "{text}"
+    }})'''
+    if bl == 0:
+        bl += 1
+    else:
+        default = f'''
+        .then(function(){{ 
+            return botui.message.bot({{ 
+                delay: {delay_value}, 
+                loading: {loading_value}, 
+                content: '{text}' 
+            }}) 
+        }})\n
+        '''
+        bl += 1
+    print(default)
+    writefile(default)
+    inbranchline()
+
+
+def inbranchline():
+    while True:
+        a = "1.继续支线"
+        b = "2.新建对话选项"
+        c = "3.对话测试"
+        d = "4.结束编辑支线并返回主线"
+        f = "5.链接到按钮"
+        print(f"\n{a}\n{b}\n{c}\n{d}\n{f}\n")
+        mode = input("选择操作：")
+        if mode == "1":
+            print(f"您选择了 \"{a}\"\n")
+            branchline()
+            print(f"当前支线长度：{bl}\n")
+        elif mode == "2":
+            print(f"您选择了 \"{b}\"\n")
+            diaoption()
+        elif mode == "3":
+            print(f"您选择了 \"{c}\"\n")
+            diatest()
+        elif mode == "4":
+            print(f"您选择了 \"{d}\"\n")
+            endsym = '''
+    };'''
+            writefile(endsym)
+            print(endsym)
+            return
+        elif mode == "5":
+            print(f"您选择了 \"{f}\"\n")
+            linkbot()
+        else:
+            print("输入错误，请重新输入！")
+
+
+def diaoption():  # 新建对话选项
+    global dop, diaopt, askt
     idop = 0
     while True:
         dop += 1
         idop += 1
-        text = input("请输入对话选项内容 (支持MarkDown,Emoji,HTML)：")
-        while not text:
-            print("内容不能为空，请重新输入：")
-            text = input("请输入对话选项内容 (支持MarkDown,Emoji,HTML)：")
-
-        delay_value = input("请输入加载延迟时间（单位：毫秒  默认为200）：")
-        if delay_value == "":
-            delay_value = 200
-        else:
-            pass
+        text = addvalue("text", "diaop")
+        delay_value = addvalue("delay_value", "diaop")
         i = input("是否链接当前按钮至当前路线？（1.是 2.否  默认为是）：")
         if i == "1":
             askt = "next"
@@ -215,12 +268,12 @@ def diaoption(): #新建对话选项
                 break
             elif mode == "3":
                 print("正在返回上一路线\n")
-                endsys = '''
+                endsym = '''
             ]})
         })
                 '''
-                writefile(endsys)
-                print(endsys)
+                writefile(endsym)
+                print(endsym)
                 return
             elif mode == "2":
                 a = 1
@@ -229,6 +282,30 @@ def diaoption(): #新建对话选项
                     a += 1
             else:
                 print("输入错误，请重新输入！")
+
+
+def linkbot():
+    print("正在展示所有按钮标识及对应文字\n")
+    try:
+        a = 1
+        while a <= len(diaopt):
+            print(f"{diaopt[a]}", end="\n" if a == len(diaopt) else "")
+            a += 1
+        all_next = all(diavalue[0].lower() ==
+                       "next" for diavalue in diaopt.values())
+        if all_next:
+            print("所有对话选项都是'next'，没有可以链接的选项")
+        else:
+            for key, diavalue in diaopt.items():
+                if diavalue[0].lower() == "next":
+                    print(f"字典第 {key} 个元素的第一个元素是 'next'")
+                else:
+                    print(f"字典第 {key} 个元素的第一个元素不是 'next'，值为: {diavalue}")
+
+                break
+    except:
+        print("请先创建对话选项\n")
+        return
 
 
 def diatest():
@@ -280,8 +357,54 @@ def diatest():
     os.startfile(diatestpath)
     return
 
+
+def addvalue(valuename, linename):
+    if valuename == "text":
+        if linename == "ml":
+            value_name = "主线对话内容"
+        elif linename == "bl":
+            value_name = "支线对话内容"
+        elif linename == "diaop":
+            value_name = "对话选项内容"
+        else:
+            value_name = "内容"
+        while True:
+            text = input(f"请输入{value_name} (支持MarkDown,Emoji,HTML)：")
+            if text:
+                return text
+            else:
+                print("内容不能为空，请重新输入：")
+    elif valuename == "delay_value":
+        while True:
+            delay_value = input("请输入加载延迟时间（单位：毫秒  默认为200）：")
+            if delay_value.isdigit():
+                return delay_value
+            elif delay_value == "":
+                return "200"
+            else:
+                print("请正确输入数字！")
+    elif valuename == "loading_value":
+        while True:
+            loading_value = input("是否显示加载动画（1.显示 2.不显示  默认为显示）：")
+            if loading_value.isdigit():
+                if loading_value == "1":
+                    loading_value = "true"
+                elif loading_value == "2":
+                    loading_value = "false"
+                else:
+                    loading_value = "true"
+                return loading_value
+            elif loading_value == "":
+                return "true"
+            else:
+                print("请输入正确的选项！")
+    else:
+        print("鬼知道你怎么触发的")
+
+
 def writefile(default):
     with open(jspath, "a", encoding="utf8") as f:
         f.write(default)
+
 
 modeselect()
