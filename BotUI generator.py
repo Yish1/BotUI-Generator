@@ -45,7 +45,7 @@ def makejsfile():
         with open(jspath, "w", encoding="utf8") as f:
             pass
         print(f"已创建{jspath}\n")
-        title = f"var botui = new BotUI(\"{jsname}\");\n"
+        title = f"var botui = new BotUI(\"{jsname}\");"
         writefile(jspath,title)
         makeroute()
 
@@ -107,23 +107,22 @@ def mainline():
     delay_value = addvalue("delay_value", "ml")
     loading_value = addvalue("loading_value", "ml")
     default = f'''
-    botui.message.bot({{
-        delay: {delay_value},
-        loading: {loading_value},
-        content: "{text}"
-    }})'''
+botui.message.bot({{
+    delay: {delay_value},
+    loading: {loading_value},
+    content: "{text}"
+}})'''
     if ml == 0:
         ml += 1
     else:
-        default = f'''
-        .then(function(){{ 
-            return botui.message.bot({{ 
-                delay: {delay_value}, 
-                loading: {loading_value}, 
-                content: '{text}' 
-            }}) 
-        }})\n
-        '''
+        default = f'''.then(function(){{
+    return botui.message.bot({{ 
+        delay: {delay_value}, 
+        loading: {loading_value}, 
+        content: '{text}' 
+    }}) 
+}})
+'''
         ml += 1
     writefile(jspath,default)
     inmainline()
@@ -180,23 +179,22 @@ def branchline():  # 新建支线
     delay_value = addvalue("delay_value", "bl")
     loading_value = addvalue("loading_value", "bl")
     default = f'''
-    botui.message.bot({{
-        delay: {delay_value},
-        loading: {loading_value},
-        content: "{text}"
-    }})'''
+botui.message.bot({{
+    delay: {delay_value},
+    loading: {loading_value},
+    content: "{text}"
+}})'''
     if bl == 0:
         bl += 1
     else:
-        default = f'''
-        .then(function(){{ 
-            return botui.message.bot({{ 
-                delay: {delay_value}, 
-                loading: {loading_value}, 
-                content: '{text}' 
-            }}) 
-        }})\n
-        '''
+        default = f'''.then(function(){{ 
+    return botui.message.bot({{ 
+        delay: {delay_value}, 
+        loading: {loading_value}, 
+        content: '{text}' 
+    }}) 
+}})
+'''
         bl += 1
     writefile(jspath,default)
     inbranchline()
@@ -230,7 +228,7 @@ def inbranchline():
 
 
 def diaoption():  # 新建对话选项
-    global dop, diaopt, askt
+    global dop, diaopt, askt, tempbranch, temptext
     back = input("输入1返回上一级，回车继续")
     if back == "1":
         return
@@ -248,24 +246,38 @@ def diaoption():  # 新建对话选项
         elif i == "2":
             askt = f"ask{dop}"
             print("即将前往分支编辑程序...")
-            newbranch(askt)
+            tempbranch = f'''.then(function (res) {{
+        if (res.value == "{askt}") {{'''
+            endbranch =         '''
+        } else {
+            botui.message.bot({
+                delay: 1500,
+                content: "啊！你干什么了？"
+            })
+        }
+    })'''
+            is_end = newbranch()
             # b = 1
             # print("可用于链接到当前选项的支线有：\n")
             # while b <= len(bllines):
             #     print(f"{bllines[b]}")
-            #     b += 1                
+            #     b += 1    
+            if is_end == "0":
+                try:
+                    temptext = tempbranch+temptext+endbranch
+                    print(temptext)
+                except:
+                    print("没有接收到分支编辑程序的结果")
         else:
             askt = "next"
         diaopt[dop] = [askt, text]  # 将对话选项存入字典中
-        default = f'''
-        .then(function (res) {{
-            return botui.action.button({{
-                delay: {delay_value},
-                action: [{{
-                    text: "{text}",
-                    value: "{askt}"
-                }}
-        '''
+        default = f'''.then(function (res) {{
+        return botui.action.button({{
+            delay: {delay_value},
+            action: [{{
+                text: "{text}",
+                value: "{askt}"
+            }}'''
         if idop == 1:
             pass
         else:
@@ -284,10 +296,10 @@ def diaoption():  # 新建对话选项
             elif mode == "3":
                 print("正在返回上一路线\n")
                 endsym = '''
-            ]})
-        })
-                '''
+        ]})
+    })'''
                 writefile(jspath,endsym)
+                writefile(jspath,str(temptext))
                 return
             elif mode == "2":
                 a = 1
@@ -297,30 +309,48 @@ def diaoption():  # 新建对话选项
             else:
                 print("输入错误，请重新输入！")
 
-def newbranch(askt):
+def newbranch():
+    global temptext
+    bc = 0
     while True:
         a = "1.新增分支"
         b = "2.新建对话选项"
-        c = "3.对话测试"
-        d = "4.结束编辑分支并返回主线"
-        print(f"\n{a}\n{b}\n{c}\n{d}\n")
+        c = "3.结束编辑分支并返回上一路线"
+        print(f"\n{a}\n{b}\n{c}\n")
         mode = input("选择操作：")
         if mode == "1":
-            print(f"您选择了 \"{a}\"\n")
-            branchline()
-            print(f"当前支线长度：{bl}\n")
+            text = addvalue("text", "bl")
+            delay_value = addvalue("delay_value", "bl")
+            loading_value = addvalue("loading_value", "bl")
+            default1 = f'''
+            botui.message.bot({{
+                delay: {delay_value},
+                loading: {loading_value},
+                content: "{text}"
+            }})'''
+            if bc == 0:
+                bc += 1
+            else:
+                default1 = f'''.then(function(){{ 
+            return botui.message.bot({{ 
+                delay: {delay_value}, 
+                loading: {loading_value}, 
+                content: '{text}' 
+            }}) 
+        }})'''
+                bc += 1
+            try:
+                temptext = (temptext+default1)
+            except:
+                temptext = default1
+            print(temptext)
+
         elif mode == "2":
             print(f"您选择了 \"{b}\"\n")
             diaoption()
         elif mode == "3":
             print(f"您选择了 \"{c}\"\n")
-            diatest()
-        elif mode == "4":
-            print(f"您选择了 \"{d}\"\n")
-            endsym = '''
-    };'''
-            writefile(jspath,endsym)
-            return
+            return "0"
         else:
             print("输入错误，请重新输入！")
 
@@ -417,7 +447,6 @@ def addvalue(valuename, linename):
                 print("请输入正确的选项！")
     else:
         print("鬼知道你怎么触发的")
-
 
 def writefile(filepath,default):
     with open(filepath, "a", encoding="utf8") as f:
