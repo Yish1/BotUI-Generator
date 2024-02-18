@@ -3,8 +3,10 @@ import re
 ml = 0
 dop = 0
 bl = 0
+blnum = 0
 ismainline = 1
 diaopt = {}
+bllines = {}
 version = 0.2
 print("欢迎使用BotUI对话生成器！\n")
 
@@ -28,9 +30,10 @@ def makejsfile():
     os.makedirs('BotUI JS', exist_ok=True)
     while True:
         jsname = input("请输入要创建的对话脚本名称：")
-        if not jsname[0].isalpha() or re.search("[\u4e00-\u9fa5]", jsname) or not jsname[:-1].isalnum() or not jsname[-1].isalnum() or jsname.endswith("\\"):
+        if jsname == "":
+            print("对话脚本名称不能为空！")
+        elif not jsname[0].isalpha() or re.search("[\u4e00-\u9fa5]", jsname) or not jsname[:-1].isalnum() or not jsname[-1].isalnum() or jsname.endswith("\\"):
             print("对话脚本名称必须以英文字母开头且不能以符号结尾，请重新输入！")
-
         else:
             break
     jspath = os.path.join("BotUI JS", f"{jsname}.js")
@@ -43,8 +46,7 @@ def makejsfile():
             pass
         print(f"已创建{jspath}\n")
         title = f"var botui = new BotUI(\"{jsname}\");\n"
-        with open(jspath, "w", encoding="utf8") as f:
-            f.write(title)
+        writefile(jspath,title)
         makeroute()
 
 
@@ -74,7 +76,6 @@ def makeroute():
         if mode == "1":
             print(f"您选择了 \"{a}\"\n")
             mainline()
-            print(f"当前主线长度：{ml}\n")
         elif mode == "2":
             print(f"您选择了 \"{b}\"\n")
             makebl()
@@ -96,6 +97,11 @@ def makeroute():
 
 def mainline():
     global ml, ismainline
+    back = input("输入1返回上一级，回车继续")
+    if back == "1":
+        return
+    else:
+        pass
     ismainline = 1
     text = addvalue("text", "ml")
     delay_value = addvalue("delay_value", "ml")
@@ -119,8 +125,7 @@ def mainline():
         }})\n
         '''
         ml += 1
-    print(default)
-    writefile(default)
+    writefile(jspath,default)
     inmainline()
 
 
@@ -135,7 +140,6 @@ def inmainline():
         if mode == "1":
             print(f"您选择了 \"{a}\"\n")
             mainline()
-            print(f"当前主线长度：{ml}\n")
         elif mode == "2":
             print(f"您选择了 \"{b}\"\n")
             diaoption()
@@ -150,6 +154,12 @@ def inmainline():
 
 
 def makebl():
+    global blname,blnum,bllines
+    back = input("输入1返回上一级，回车继续")
+    if back == "1":
+        return
+    else:
+        pass
     while True:
         blname = input("请输入支线名称：")
         if not blname[0].isalpha() or re.search("[\u4e00-\u9fa5]", blname):
@@ -157,7 +167,9 @@ def makebl():
         else:
             break
     title = f"var {blname} = function () {{"
-    writefile(title)
+    writefile(jspath,title)
+    blnum += 1
+    bllines[blnum] = [blname]
     branchline()
 
 
@@ -186,8 +198,7 @@ def branchline():  # 新建支线
         }})\n
         '''
         bl += 1
-    print(default)
-    writefile(default)
+    writefile(jspath,default)
     inbranchline()
 
 
@@ -197,13 +208,11 @@ def inbranchline():
         b = "2.新建对话选项"
         c = "3.对话测试"
         d = "4.结束编辑支线并返回主线"
-        f = "5.链接到按钮"
-        print(f"\n{a}\n{b}\n{c}\n{d}\n{f}\n")
+        print(f"\n{a}\n{b}\n{c}\n{d}\n")
         mode = input("选择操作：")
         if mode == "1":
             print(f"您选择了 \"{a}\"\n")
             branchline()
-            print(f"当前支线长度：{bl}\n")
         elif mode == "2":
             print(f"您选择了 \"{b}\"\n")
             diaoption()
@@ -214,30 +223,37 @@ def inbranchline():
             print(f"您选择了 \"{d}\"\n")
             endsym = '''
     };'''
-            writefile(endsym)
-            print(endsym)
+            writefile(jspath,endsym)
             return
-        elif mode == "5":
-            print(f"您选择了 \"{f}\"\n")
-            linkbot()
         else:
             print("输入错误，请重新输入！")
 
 
 def diaoption():  # 新建对话选项
     global dop, diaopt, askt
+    back = input("输入1返回上一级，回车继续")
+    if back == "1":
+        return
+    else:
+        pass
     idop = 0
     while True:
         dop += 1
         idop += 1
         text = addvalue("text", "diaop")
         delay_value = addvalue("delay_value", "diaop")
-        i = input("是否链接当前按钮至当前路线？（1.是 2.否  默认为是）：")
+        i = input("是否链接按钮至当前路线？（1.是 2.否  默认为是）：")
         if i == "1":
             askt = "next"
         elif i == "2":
             askt = f"ask{dop}"
-            print(f"当前选项命名为{askt},可调用其他路线")
+            print("即将前往分支编辑程序...")
+            newbranch(askt)
+            # b = 1
+            # print("可用于链接到当前选项的支线有：\n")
+            # while b <= len(bllines):
+            #     print(f"{bllines[b]}")
+            #     b += 1                
         else:
             askt = "next"
         diaopt[dop] = [askt, text]  # 将对话选项存入字典中
@@ -260,10 +276,9 @@ def diaoption():  # 新建对话选项
                 value: "{askt}"
             }}
             '''
-        print(default)
-        writefile(default)
+        writefile(jspath,default)
         while True:
-            mode = input(f"您已添加{dop}个对话选项，要继续嘛？\n1.继续添加\n2.查询选项名\n3.返回上一路线\n")
+            mode = input(f"您已添加{dop}个对话选项，要继续嘛？\n1.继续添加\n2.查询已添加选项\n3.返回上一路线\n")
             if mode == "1":
                 break
             elif mode == "3":
@@ -272,8 +287,7 @@ def diaoption():  # 新建对话选项
             ]})
         })
                 '''
-                writefile(endsym)
-                print(endsym)
+                writefile(jspath,endsym)
                 return
             elif mode == "2":
                 a = 1
@@ -283,29 +297,32 @@ def diaoption():  # 新建对话选项
             else:
                 print("输入错误，请重新输入！")
 
-
-def linkbot():
-    print("正在展示所有按钮标识及对应文字\n")
-    try:
-        a = 1
-        while a <= len(diaopt):
-            print(f"{diaopt[a]}", end="\n" if a == len(diaopt) else "")
-            a += 1
-        all_next = all(diavalue[0].lower() ==
-                       "next" for diavalue in diaopt.values())
-        if all_next:
-            print("所有对话选项都是'next'，没有可以链接的选项")
+def newbranch(askt):
+    while True:
+        a = "1.新增分支"
+        b = "2.新建对话选项"
+        c = "3.对话测试"
+        d = "4.结束编辑分支并返回主线"
+        print(f"\n{a}\n{b}\n{c}\n{d}\n")
+        mode = input("选择操作：")
+        if mode == "1":
+            print(f"您选择了 \"{a}\"\n")
+            branchline()
+            print(f"当前支线长度：{bl}\n")
+        elif mode == "2":
+            print(f"您选择了 \"{b}\"\n")
+            diaoption()
+        elif mode == "3":
+            print(f"您选择了 \"{c}\"\n")
+            diatest()
+        elif mode == "4":
+            print(f"您选择了 \"{d}\"\n")
+            endsym = '''
+    };'''
+            writefile(jspath,endsym)
+            return
         else:
-            for key, diavalue in diaopt.items():
-                if diavalue[0].lower() == "next":
-                    print(f"字典第 {key} 个元素的第一个元素是 'next'")
-                else:
-                    print(f"字典第 {key} 个元素的第一个元素不是 'next'，值为: {diavalue}")
-
-                break
-    except:
-        print("请先创建对话选项\n")
-        return
+            print("输入错误，请重新输入！")
 
 
 def diatest():
@@ -402,9 +419,11 @@ def addvalue(valuename, linename):
         print("鬼知道你怎么触发的")
 
 
-def writefile(default):
-    with open(jspath, "a", encoding="utf8") as f:
+def writefile(filepath,default):
+    with open(filepath, "a", encoding="utf8") as f:
         f.write(default)
+    print(f"已在{filepath}中写入{default}")
+    return
 
 
 modeselect()
