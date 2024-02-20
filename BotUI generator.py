@@ -13,9 +13,8 @@ print("欢迎使用BotUI对话生成器！\n")
 
 #字面意思Just like its name
 def modeselect():
-    global original_globals
     # 保存变量副本
-    original_globals = globals().copy()
+    savevar("1")
     print("1.创建新脚本\n2.打开已存在脚本\n")
     mode = input("选择工作模式：")
     if mode == "1":
@@ -87,9 +86,8 @@ def makeroute():
             makebl()
         elif mode == "3":
             print(f"您选择了 \"{c}\"\n")
-            globals().update(original_globals)
+            savevar("2")
             modeselect()
-            
         elif mode == "4":
             print(f"您选择了 \"{d}\"\n")
             mainline()
@@ -115,6 +113,7 @@ def mainline():
     delay_value = addvalue("delay_value", "ml")
     loading_value = addvalue("loading_value", "ml")
     default = f'''
+//Mainline start
 botui.message.bot({{
     delay: {delay_value},
     loading: {loading_value},
@@ -128,9 +127,8 @@ botui.message.bot({{
         delay: {delay_value}, 
         loading: {loading_value}, 
         content: '{text}' 
-    }}) 
-}})
-'''
+    }})
+}})'''
         ml += 1
     writefile(jspath, default)
     inmainline()
@@ -186,7 +184,7 @@ def branchline():  # 新建支线
     ismainline = 2
     delay_value = addvalue("delay_value", "bl")
     loading_value = addvalue("loading_value", "bl")
-    default = f'''
+    default = f'''//Branchline start
 botui.message.bot({{
     delay: {delay_value},
     loading: {loading_value},
@@ -201,8 +199,7 @@ botui.message.bot({{
         loading: {loading_value}, 
         content: '{text}' 
     }}) 
-}})
-'''
+}})'''
         bl += 1
     writefile(jspath, default)
     inbranchline()
@@ -253,7 +250,7 @@ def diaoption():  # 新建对话选项
             askt = "next"
         elif i == "2":
             askt = f"ask{dop}"
-            print("即将前往分支编辑程序...")
+            print("\n即将前往分支编辑程序...")
             ifbranch_head = f'''.then(function (res) {{
         if (res.value == "{askt}") {{'''
             endbranch = '''
@@ -279,7 +276,7 @@ def diaoption():  # 新建对话选项
         else:
             askt = "next"
         diaopt[dop] = [askt, text]  # 将对话选项存入字典中
-        default = f'''.then(function (res) {{
+        default = f'''.then(function (res) {{ //Dialog option start
         return botui.action.button({{
             delay: {delay_value},
             action: [{{
@@ -294,8 +291,7 @@ def diaoption():  # 新建对话选项
             {{
                 text: "{text}",
                 value: "{askt}"
-            }}
-            '''
+            }}'''
         writefile(jspath, default)
         while True:
             mode = input(
@@ -305,8 +301,9 @@ def diaoption():  # 新建对话选项
             elif mode == "3":
                 print("正在返回上一路线\n")
                 endsym = '''
-        ]})
-    })'''
+        ]
+    })
+})'''
                 writefile(jspath, endsym)
                 try:
                     writefile(jspath, temptext)
@@ -344,7 +341,7 @@ def newbranch():
             if bc == 0:
                 bc += 1
             else:
-                default1 = f'''.then(function(){{ 
+                default1 = f'''.then(function(){{ //Branchline start
             return botui.message.bot({{ 
                 delay: {delay_value}, 
                 loading: {loading_value}, 
@@ -467,5 +464,17 @@ def writefile(filepath, default):
         f.write(default)
     print(f"已在{filepath}中写入{default}")
     return
+
+def savevar(varoption):
+    global varbak
+    if varoption == "1":
+        #保存变量
+        varbak = globals().copy()
+        return
+    else:
+        # 恢复变量
+        globals().update(varbak)
+
+
 
 modeselect()
