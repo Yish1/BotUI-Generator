@@ -1,17 +1,21 @@
 import os
 import re
-ml = 0
-dop = 0
-bl = 0
-blnum = 0
-ismainline = 1
-diaopt = {}
-bllines = {}
+ml = 0      #主线长度 mainlaine lenth
+dop = 0     #对话选项数量 dialogue number
+bl = 0      #支线长度 branchline lenth
+blnum = 0   #支线数量 branckline num 
+bcnum = 0   #分支数量 
+ismainline = 1  #路线判断，2为支线 1 is in mainline 2 is in branchline
+diaopt = {}     #记录对话选项的集合 record dialogue option 
+bllines = {}    #记录支线的集合 record branch line
 version = 0.2
 print("欢迎使用BotUI对话生成器！\n")
 
-
+#字面意思Just like its name
 def modeselect():
+    global original_globals
+    # 保存变量副本
+    original_globals = globals().copy()
     print("1.创建新脚本\n2.打开已存在脚本\n")
     mode = input("选择工作模式：")
     if mode == "1":
@@ -24,7 +28,7 @@ def modeselect():
         print("输入错误，请重新输入！")
         modeselect()
 
-
+#生成js文件 generate js file
 def makejsfile():
     global jspath, jsname
     os.makedirs('BotUI JS', exist_ok=True)
@@ -38,15 +42,15 @@ def makejsfile():
             break
     jspath = os.path.join("BotUI JS", f"{jsname}.js")
 
-    if os.path.exists(jspath):
-        print("文件已存在，请重新输入！\n")
-        makejsfile()
-    else:
-        with open(jspath, "w", encoding="utf8") as f:
-            pass
+    # if os.path.exists(jspath):
+    #     print("文件已存在，请重新输入！\n")
+    #     makejsfile()
+    # else:
+    with open(jspath, "w", encoding="utf8") as f:
+        pass
         print(f"已创建{jspath}\n")
         title = f"var botui = new BotUI(\"{jsname}\");"
-        writefile(jspath,title)
+        writefile(jspath, title)
         makeroute()
 
 
@@ -72,6 +76,8 @@ def makeroute():
             else:
                 # 处于支线时，但有多条
                 print(f"\n{b}\n{c}\n{d}\n{e}\n{f}\n")
+        else:
+            print(f"\n{a}\n{b}\n")
         mode = input("选择操作：")
         if mode == "1":
             print(f"您选择了 \"{a}\"\n")
@@ -81,7 +87,9 @@ def makeroute():
             makebl()
         elif mode == "3":
             print(f"您选择了 \"{c}\"\n")
+            globals().update(original_globals)
             modeselect()
+            
         elif mode == "4":
             print(f"您选择了 \"{d}\"\n")
             mainline()
@@ -124,7 +132,7 @@ botui.message.bot({{
 }})
 '''
         ml += 1
-    writefile(jspath,default)
+    writefile(jspath, default)
     inmainline()
 
 
@@ -153,7 +161,7 @@ def inmainline():
 
 
 def makebl():
-    global blname,blnum,bllines
+    global blname, blnum, bllines
     back = input("输入1返回上一级，回车继续")
     if back == "1":
         return
@@ -166,7 +174,7 @@ def makebl():
         else:
             break
     title = f"var {blname} = function () {{"
-    writefile(jspath,title)
+    writefile(jspath, title)
     blnum += 1
     bllines[blnum] = [blname]
     branchline()
@@ -196,7 +204,7 @@ botui.message.bot({{
 }})
 '''
         bl += 1
-    writefile(jspath,default)
+    writefile(jspath, default)
     inbranchline()
 
 
@@ -221,14 +229,14 @@ def inbranchline():
             print(f"您选择了 \"{d}\"\n")
             endsym = '''
     };'''
-            writefile(jspath,endsym)
+            writefile(jspath, endsym)
             return
         else:
             print("输入错误，请重新输入！")
 
 
 def diaoption():  # 新建对话选项
-    global dop, diaopt, askt, tempbranch, temptext
+    global dop, diaopt, askt, ifbranch_head, temptext
     back = input("输入1返回上一级，回车继续")
     if back == "1":
         return
@@ -246,9 +254,9 @@ def diaoption():  # 新建对话选项
         elif i == "2":
             askt = f"ask{dop}"
             print("即将前往分支编辑程序...")
-            tempbranch = f'''.then(function (res) {{
+            ifbranch_head = f'''.then(function (res) {{
         if (res.value == "{askt}") {{'''
-            endbranch =         '''
+            endbranch = '''
         } else {
             botui.message.bot({
                 delay: 1500,
@@ -261,10 +269,10 @@ def diaoption():  # 新建对话选项
             # print("可用于链接到当前选项的支线有：\n")
             # while b <= len(bllines):
             #     print(f"{bllines[b]}")
-            #     b += 1    
+            #     b += 1
             if is_end == "0":
                 try:
-                    temptext = tempbranch+temptext+endbranch
+                    temptext = ifbranch_head+temptext+endbranch
                     print(temptext)
                 except:
                     print("没有接收到分支编辑程序的结果")
@@ -288,9 +296,10 @@ def diaoption():  # 新建对话选项
                 value: "{askt}"
             }}
             '''
-        writefile(jspath,default)
+        writefile(jspath, default)
         while True:
-            mode = input(f"您已添加{dop}个对话选项，要继续嘛？\n1.继续添加\n2.查询已添加选项\n3.返回上一路线\n")
+            mode = input(
+                f"您已添加{dop}个对话选项，要继续嘛？\n1.继续添加\n2.查询已添加选项\n3.返回上一路线\n")
             if mode == "1":
                 break
             elif mode == "3":
@@ -298,8 +307,11 @@ def diaoption():  # 新建对话选项
                 endsym = '''
         ]})
     })'''
-                writefile(jspath,endsym)
-                writefile(jspath,str(temptext))
+                writefile(jspath, endsym)
+                try:
+                    writefile(jspath, temptext)
+                except:
+                    pass
                 return
             elif mode == "2":
                 a = 1
@@ -308,6 +320,7 @@ def diaoption():  # 新建对话选项
                     a += 1
             else:
                 print("输入错误，请重新输入！")
+
 
 def newbranch():
     global temptext
@@ -448,11 +461,11 @@ def addvalue(valuename, linename):
     else:
         print("鬼知道你怎么触发的")
 
-def writefile(filepath,default):
+
+def writefile(filepath, default):
     with open(filepath, "a", encoding="utf8") as f:
         f.write(default)
     print(f"已在{filepath}中写入{default}")
     return
-
 
 modeselect()
